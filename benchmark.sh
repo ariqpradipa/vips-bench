@@ -83,7 +83,7 @@ benchmark() {
     elapsed_time=$(awk "BEGIN {print $end_time - $start_time}")
 
     get_mem "$name" "$cmd"
-    echo $name, $cmd_time, $cmd_mem, $elapsed_time
+    echo $name, $cmd_time, $cmd_mem, $elapsed_time >> log.txt 2>&1
 
     echo "time, $cmd_time, " >> "$name.csv"
 }
@@ -232,5 +232,3 @@ echo "combined memory traces in memtrace.csv"
 
 echo clearing test area ...
 rm -rf $tmp
-
-> log.txt 2>&1
