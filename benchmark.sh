@@ -20,73 +20,25 @@ vipsheader $tmp/x.tif
 # needed for vips.php below
 composer install
 
-# try to find the real time a command took to run
-real_time() {
-	# capture command output to y, time output to x
-	(time -p $* &> tmp/y) &> tmp/x
-
-	# get just the "real 0.2" line
-	real=($(cat tmp/x | grep real))
-
-	# and just the number
-	return_real_time=${real[1]}
-}
-
-# run a command several times, return the fastest real time
-
-# sleep for two secs between runs to let the system settle -- after a run
-# there's a short period of disc chatter we want to avoid
-
-# you should check that services like tracker are not running
-
-get_time() {
-	cmd=$*
-
-	times=()
-	for i in {1..5}; do
-		sleep 2
-		real_time $cmd
-		times+=($return_real_time)
-	done
-
-	IFS=$'\n' times=($(sort -g <<<"${times[*]}"))
-	unset IFS
-
-	cmd_time=$times
-}
-
-# run a command and get a trace of memuse in a csv file
-get_mem() {
-	name=$1
-	cmd=$2
-	user=$(whoami)
-
-	rm -f $tmp/vipsbench.lock
-	(while [ ! -f $tmp/vipsbench.lock ]; do 
-		ps u -u $user 
-		sleep 0.01
-	 done | ./parse-ps.rb "$name" > "$name.csv") &
-	$cmd 
-	touch $tmp/vipsbench.lock
-	sleep 1
-	cmd_mem=$(tail -1 "$name.csv" | awk '{ print $3 }')
-}
-
 # benchmark
 benchmark() {
-	name=$1
-	cmd=$2
+    name=$1
+    cmd=$2
 
-	get_time $cmd
-	get_mem "$name" "$cmd"
-	echo $name, $cmd_time, $cmd_mem 
+    start_time=$(date +%s.%N)
+    get_time $cmd
+    end_time=$(date +%s.%N)
+    elapsed_time=$(awk "BEGIN {print $end_time - $start_time}")
 
-	echo "time, $cmd_time, " >> "$name.csv"
+    get_mem "$name" "$cmd"
+    echo $name, $cmd_time, $cmd_mem, $elapsed_time
+
+    echo "time, $cmd_time, " >> "$name.csv"
 }
 
 rm -f *.csv
 
-echo "program, time (s), peak memory (MB)"
+echo "program, fastest time (s), peak memory (MB), elapsed time (s)"
 
 # gm, im etc. control concurreny with this ... but leave at the default
 export OMP_NUM_THREADS=16
